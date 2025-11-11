@@ -6,58 +6,60 @@ pipeline {
   }
 
   stages {
-    stage('SonarQube Analysis') {
+    stage('SonarQube Analysis + Quality Gate') {
       steps {
         withSonarQubeEnv('sonarqube-server') {
-          withCredentials([string(credentialsId: 'd10555ea-7c4b-40f7-9108-652b3aa63528', variable: 'SONAR_AUTH_TOKEN')]){
-          script {
-            def scannerHome = tool 'sonar-scanner'
-            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=python-project -Dsonar.sources=. -Dsonar.language=py -Dsonar.sourceEncoding=UTF-8 -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_AUTH_TOKEN | tee sonar.log"
+          withCredentials([string(credentialsId: 'd10555ea-7c4b-40f7-9108-652b3aa63528', variable: 'SONAR_AUTH_TOKEN')]) {
+            script {
+              def scannerHome = tool 'sonar-scanner'
+              sh """
+                ${scannerHome}/bin/sonar-scanner \
+                  -Dsonar.projectKey=python-project \
+                  -Dsonar.sources=. \
+                  -Dsonar.language=py \
+                  -Dsonar.sourceEncoding=UTF-8 \
+                  -Dsonar.host.url=$SONAR_HOST_URL \
+                  -Dsonar.token=$SONAR_AUTH_TOKEN | tee sonar.log
+              """
 
-            env.CE_TASK_ID = sh(
-              script: "grep -o 'ce/task?id=[^ ]*' sonar.log | sed 's/.*id=//' | tail -1",
-              returnStdout: true
-            ).trim()
-            echo "SonarQube task ID: ${env.CE_TASK_ID}"
-          }
-        }
-        }
-      }
-    }
-
-    stage('Quality Gate (Polling)') {
-      steps {
-        script {
-          echo "Polling SonarQube API for Quality Gate result..."
-          timeout(time: 3, unit: 'MINUTES') {
-            waitUntil {
-              def status = sh(
-                script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/ce/task?id=${env.CE_TASK_ID} | jq -r .task.status || echo 'NULL'""",
+              env.CE_TASK_ID = sh(
+                script: "grep -o 'ce/task?id=[^ ]*' sonar.log | sed 's/.*id=//' | tail -1",
                 returnStdout: true
               ).trim()
-              echo "Current task status: ${status}"
+              echo "SonarQube task ID: ${env.CE_TASK_ID}"
 
-              if (status == "SUCCESS") {
-                def qg = sh(
-                  script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/qualitygates/project_status?projectKey=python-project | jq -r .projectStatus.status""",
-                  returnStdout: true
-                ).trim()
-                echo "Quality Gate status: ${qg}"
-                if (qg != "OK") {
-                  error "Quality Gate failed: Skipping Hadoop job."
-                } else {
-                  echo "Quality Gate passed!"
+              echo "Polling SonarQube API for Quality Gate result..."
+              timeout(time: 3, unit: 'MINUTES') {
+                waitUntil {
+                  def status = sh(
+                    script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/ce/task?id=${env.CE_TASK_ID} | jq -r .task.status || echo 'NULL'""",
+                    returnStdout: true
+                  ).trim()
+                  echo "Current task status: ${status}"
+
+                  if (status == "SUCCESS") {
+                    def qg = sh(
+                      script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/qualitygates/project_status?projectKey=python-project | jq -r .projectStatus.status""",
+                      returnStdout: true
+                    ).trim()
+                    echo "Quality Gate status: ${qg}"
+                    if (qg != "OK") {
+                      error "Quality Gate failed: Skipping Hadoop job."
+                    } else {
+                      echo "Quality Gate passed!"
+                    }
+                    return true
+                  } else if (status == "FAILED") {
+                    error "Sonar analysis failed."
+                  } else if (status == "NULL") {
+                    echo "jq missing or API failed; retrying..."
+                    sleep 5
+                    return false
+                  } else {
+                    sleep 5
+                    return false
+                  }
                 }
-                return true
-              } else if (status == "FAILED") {
-                error "Sonar analysis failed."
-              } else if (status == "NULL") {
-                echo "jq missing or API failed; retrying..."
-                sleep 5
-                return false
-              } else {
-                sleep 5
-                return false
               }
             }
           }
