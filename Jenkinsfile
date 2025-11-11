@@ -27,7 +27,19 @@ pipeline {
         }
       }
     }
+    stage('Authenticate to Hadoop Project') {
+      steps {
+        withCredentials([file(credentialsId: 'hadoop-sa-json', variable: 'GOOGLE_CLOUD_KEYFILE_JSON')]) {
+          sh '''
+            gcloud auth activate-service-account --key-file=$GOOGLE_CLOUD_KEYFILE_JSON
 
+            gcloud container clusters get-credentials hadoop-cluster \
+              --zone=us-west1-a \
+              --project=cloud-infra-project-474322
+          '''
+        }
+      }
+    }
     stage('Run Hadoop Job') {
       steps {
         sh '''
