@@ -4,16 +4,17 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv('sonarqube-server') {
-          withSonarQubeScanner('sonar-scanner') {
-            sh '''
-            sonar-scanner \
+          script {
+            def scannerHome = tool 'sonar-scanner'
+            sh """
+            ${scannerHome}/bin/sonar-scanner \
               -Dsonar.projectKey=python-project \
               -Dsonar.sources=. \
               -Dsonar.language=py \
               -Dsonar.sourceEncoding=UTF-8 \
               -Dsonar.host.url=$SONAR_HOST_URL \
               -Dsonar.login=$SONAR_AUTH_TOKEN
-            '''
+            """
           }
         }
       }
