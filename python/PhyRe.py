@@ -171,6 +171,7 @@ for i in open(popfile):
         x = i.split()
         x.remove('Coefficients:')
         x = map(eval, x)
+        y = 1
 
         for t in taxon:
             i = taxon.index(t)
