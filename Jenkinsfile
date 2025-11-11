@@ -9,6 +9,7 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv('sonarqube-server') {
+          withCredentials([string(credentialsId: 'd10555ea-7c4b-40f7-9108-652b3aa63528', variable: 'SONAR_AUTH_TOKEN')]){
           script {
             def scannerHome = tool 'sonar-scanner'
             sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=python-project -Dsonar.sources=. -Dsonar.language=py -Dsonar.sourceEncoding=UTF-8 -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_AUTH_TOKEN | tee sonar.log"
@@ -19,6 +20,7 @@ pipeline {
             ).trim()
             echo "SonarQube task ID: ${env.CE_TASK_ID}"
           }
+        }
         }
       }
     }
