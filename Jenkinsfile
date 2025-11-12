@@ -111,8 +111,8 @@ pipeline {
           kubectl exec -n hadoop hadoop-hadoop-hdfs-nn-0 -- bash -lc '
             /opt/hadoop/bin/hdfs dfs -rm -r -f /user/jenkins/output || true &&
             /opt/hadoop/bin/hadoop jar /opt/hadoop/share/hadoop/tools/lib/hadoop-streaming*.jar \
+            -D mapreduce.input.fileinputformat.input.dir.recursive=true \
             -inputformat org.apache.hadoop.mapred.TextInputFormat \
-              -D mapreduce.input.fileinputformat.input.dir.recursive=true \
               -files /tmp/mapper.py,/tmp/reducer.py \
               -mapper "python3 mapper.py" \
               -reducer "python3 reducer.py" \
