@@ -85,13 +85,19 @@ pipeline {
     stage('Prepare HDFS Input') {
       steps {
         sh '''
-          kubectl exec -n hadoop -it hadoop-hadoop-hdfs-nn-0 -- bash -lc '
+          echo "=== Current workspace content ==="
+          ls -R
+          echo "Copying workspace to Hadoop pod..."
+          kubectl cp -n hadoop . hadoop-hadoop-hdfs-nn-0:/tmp/python-code-disasters
+
+          kubectl exec -n hadoop hadoop-hadoop-hdfs-nn-0 -- bash -lc '
             if /opt/hadoop/bin/hdfs dfs -test -d /user/jenkins/repo/python-code-disasters; then
               echo "Directory already exists. Removing old data..."
               /opt/hadoop/bin/hdfs dfs -rm -r -f /user/jenkins/repo/python-code-disasters
             fi
             /opt/hadoop/bin/hdfs dfs -mkdir -p /user/jenkins/repo &&
-            /opt/hadoop/bin/hdfs dfs -put -f ./python-code-disasters /user/jenkins/repo/
+            echo "Uploading /tmp/python-code-disasters from pod to HDFS..."
+            /opt/hadoop/bin/hdfs dfs -put -f /tmp/python-code-disasters /user/jenkins/repo/
           '
         '''
       }
@@ -102,7 +108,7 @@ pipeline {
         sh '''
           kubectl cp -n hadoop mapper.py hadoop-hadoop-hdfs-nn-0:/tmp/
           kubectl cp -n hadoop reducer.py hadoop-hadoop-hdfs-nn-0:/tmp/
-          kubectl exec -n hadoop -it hadoop-hadoop-hdfs-nn-0 -- bash -lc '
+          kubectl exec -n hadoop hadoop-hadoop-hdfs-nn-0 -- bash -lc '
             /opt/hadoop/bin/hdfs dfs -rm -r -f /user/jenkins/output || true &&
             /opt/hadoop/bin/hadoop jar /opt/hadoop/share/hadoop/tools/lib/hadoop-streaming*.jar \
               -files /tmp/mapper.py,/tmp/reducer.py \
@@ -111,7 +117,7 @@ pipeline {
               -input /user/jenkins/repo/python-code-disasters \
               -output /user/jenkins/output
           '
-          kubectl exec -n hadoop -it hadoop-hadoop-hdfs-nn-0 -- bash -lc '/opt/hadoop/bin/hdfs dfs -cat /user/jenkins/output/part-*'
+          kubectl exec -n hadoop hadoop-hadoop-hdfs-nn-0 -- bash -lc '/opt/hadoop/bin/hdfs dfs -cat /user/jenkins/output/part-*'
         '''
       }
     }
