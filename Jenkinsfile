@@ -70,13 +70,13 @@ pipeline {
 
     stage('Authenticate to Hadoop Project') {
       steps {
-        withCredentials([file(credentialsId: 'hadoop-sa-json', variable: 'GOOGLE_CLOUD_KEYFILE_JSON')]) {
-          sh '''
-            gcloud auth activate-service-account --key-file=$GOOGLE_CLOUD_KEYFILE_JSON
-            gcloud container clusters get-credentials hadoop-cluster \
-              --zone=us-west1-a \
-              --project=cloud-infra-project-474322
-          '''
+        withCredentials([file(credentialsId: '28bc177a-3504-4f54-a8e6-ea3a0c9be25e', variable: 'GOOGLE_CLOUD_KEYFILE_JSON')]) {
+            sh '''
+                gcloud auth activate-service-account --key-file=$GOOGLE_CLOUD_KEYFILE_JSON
+                gcloud container clusters get-credentials hadoop-cluster \
+                  --zone=us-west1-a \
+                  --project=cloud-infra-project-474322
+            '''
         }
       }
     }
