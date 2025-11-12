@@ -113,7 +113,8 @@ pipeline {
             /opt/hadoop/bin/hadoop jar /opt/hadoop/share/hadoop/tools/lib/hadoop-streaming*.jar \
             -D mapreduce.input.fileinputformat.input.dir.recursive=true \
             -inputformat org.apache.hadoop.mapred.TextInputFormat \
-              -files /tmp/mapper.py,/tmp/reducer.py \
+              -file /tmp/mapper.py \
+              -file /tmp/reducer.py \
               -mapper "python3 mapper.py" \
               -reducer "python3 reducer.py" \
               -input /user/jenkins/repo/python-code-disasters \
