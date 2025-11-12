@@ -11,6 +11,7 @@ pipeline {
         withSonarQubeEnv('sonarqube-server') {
           withCredentials([string(credentialsId: 'd10555ea-7c4b-40f7-9108-652b3aa63528', variable: 'SONAR_AUTH_TOKEN')]) {
             script {
+              sh 'apt-get update && apt-get install -y jq'
               def scannerHome = tool 'sonar-scanner'
               sh """
                 ${scannerHome}/bin/sonar-scanner \
