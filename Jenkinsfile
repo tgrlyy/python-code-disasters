@@ -1,8 +1,9 @@
 pipeline {
-  agent any
-
-  environment {
-    SONAR_SCANNER_OPTS = "-Xmx2048m"
+  agent {
+    kubernetes {
+      label 'jenkins-jenkins-agent'
+      defaultContainer 'tools'
+    }
   }
 
   stages {
