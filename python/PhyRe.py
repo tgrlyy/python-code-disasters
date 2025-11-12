@@ -170,7 +170,7 @@ for i in open(popfile):
     elif match('Coefficients:', i):
         x = i.split()
         x.remove('Coefficients:')
-        x = list(map(eval, x))
+        x = map(eval, x)
 
         for t in taxon:
             i = taxon.index(t)
