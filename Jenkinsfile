@@ -11,7 +11,6 @@ pipeline {
         withSonarQubeEnv('sonarqube-server') {
           withCredentials([string(credentialsId: 'd10555ea-7c4b-40f7-9108-652b3aa63528', variable: 'SONAR_AUTH_TOKEN')]) {
             script {
-              sh 'apt-get update && apt-get install -y jq'
               def scannerHome = tool 'sonar-scanner'
               sh """
                 ${scannerHome}/bin/sonar-scanner \
@@ -33,17 +32,18 @@ pipeline {
               timeout(time: 3, unit: 'MINUTES') {
                 waitUntil {
                   def status = sh(
-                    script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/ce/task?id=${env.CE_TASK_ID} | jq -r .task.status || echo 'NULL'""",
+                    script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/ce/task?id=${env.CE_TASK_ID} | grep -o '"status":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"' || echo 'NULL'""",
                     returnStdout: true
                   ).trim()
                   echo "Current task status: ${status}"
 
                   if (status == "SUCCESS") {
                     def qg = sh(
-                      script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/qualitygates/project_status?projectKey=python-project | jq -r .projectStatus.status""",
+                      script: """curl -s -u $SONAR_AUTH_TOKEN: $SONAR_HOST_URL/api/qualitygates/project_status?projectKey=python-project | grep -o '"status":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"'""",
                       returnStdout: true
                     ).trim()
                     echo "Quality Gate status: ${qg}"
+
                     if (qg != "OK") {
                       error "Quality Gate failed: Skipping Hadoop job."
                     } else {
@@ -52,8 +52,8 @@ pipeline {
                     return true
                   } else if (status == "FAILED") {
                     error "Sonar analysis failed."
-                  } else if (status == "NULL") {
-                    echo "jq missing or API failed; retrying..."
+                  } else if (status == "NULL" || status == "") {
+                    echo "API request failed or still processing, retrying..."
                     sleep 5
                     return false
                   } else {
