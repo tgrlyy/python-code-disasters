@@ -82,6 +82,21 @@ pipeline {
       }
     }
 
+    stage('Prepare HDFS Input') {
+      steps {
+        sh '''
+          kubectl exec -n hadoop -it hadoop-hadoop-hdfs-nn-0 -- bash -lc '
+            if /opt/hadoop/bin/hdfs dfs -test -d /user/jenkins/repo/python-code-disasters; then
+              echo "Directory already exists. Removing old data..."
+              /opt/hadoop/bin/hdfs dfs -rm -r -f /user/jenkins/repo/python-code-disasters
+            fi
+            /opt/hadoop/bin/hdfs dfs -mkdir -p /user/jenkins/repo &&
+            /opt/hadoop/bin/hdfs dfs -put -f ./python-code-disasters /user/jenkins/repo/
+          '
+        '''
+      }
+    }
+
     stage('Run Hadoop Job') {
       steps {
         sh '''
